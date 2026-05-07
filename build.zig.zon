@@ -1,0 +1,23 @@
+.{
+    .name = .vapoursynth_mvtools_static,
+    .version = "27.0.0-1",
+    .dependencies = .{
+        .@"vapoursynth-mvtools" = .{
+            .url = "https://github.com/dubhatervapoursynth/vapoursynth-mvtools/archive/refs/tags/v27.tar.gz",
+            .hash = "N-V-__8AAMsZGQCc48ZOhJaWAnLAFkp7LyJ08ld1nnAtmW63",
+            .version = "27",
+        },
+        .nasm = .{
+            .url = "https://github.com/allyourcodebase/nasm/archive/d7356eadb2d7771542fe74e8fc0668bd78732b59.tar.gz",
+            .hash = "nasm-3.0.1-B_NnpQpTAAA25UxvqONakXtmj-a78PGe3xfgyDFgetb0",
+        },
+    },
+    .minimum_zig_version = "0.15.2",
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "LICENSE",
+        "README",
+    },
+    .fingerprint = 0x435d6b0e80dae765,
+}
