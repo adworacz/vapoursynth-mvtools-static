@@ -1,7 +1,7 @@
 const std = @import("std");
 const version = @import("build.zig.zon").dependencies.@"vapoursynth-mvtools".version;
 
-const flags = .{
+const flags: []const []const u8 = &.{
     "-fvisibility=hidden",
 };
 
@@ -10,8 +10,9 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // const is_windows = target.result.os.tag == .windows;
-    // const is_mac = target.result.os.tag == .macos;
+    const is_windows = target.result.os.tag == .windows;
+    const is_mac = target.result.os.tag == .macos;
+    const is_linux = target.result.os.tag == .linux;
     const is_x86 = target.result.cpu.arch == .x86_64;
     const is_aarch64 = target.result.cpu.arch == .aarch64;
 
@@ -26,6 +27,11 @@ pub fn build(b: *std.Build) void {
         .threads = true,
     });
 
+    const nasm = b.dependency("nasm", .{
+        .optimize = .ReleaseFast,
+    });
+    const nasm_exe = nasm.artifact("nasm");
+
     const mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
@@ -39,25 +45,70 @@ pub fn build(b: *std.Build) void {
 
     mod.addCMacro("PACKAGE_VERSION", b.fmt("\"{s}\"", .{version}));
 
-    if(is_x86) {
+    if (is_x86) {
         mod.addCMacro("MVTOOLS_X86", "1");
     }
     if (is_aarch64) {
         mod.addCMacro("MVTOOLS_ARM", "1");
     }
 
-    const vs_include_path = b.run(&.{"python", "-c", "import vapoursynth as vs; print(vs.get_include(), end='')"});
-    
-    // Add VS Headers
-    mod.addIncludePath(.{ .cwd_relative = vs_include_path });
+    const vs_include_path = b.run(&.{ "python", "-c", "import vapoursynth as vs; print(vs.get_include(), end='')" });
 
+    mod.addIncludePath(.{ .cwd_relative = vs_include_path });
     mod.addIncludePath(upstream.path("src"));
 
     mod.addCSourceFiles(.{
         .root = upstream.path("src"),
         .files = &generic_sources,
-        .flags = &flags,
+        .flags = flags,
     });
+
+    // build assembly
+
+    if (is_x86) {
+        for (x86_sources) |a| {
+            const nasm_run = b.addRunArtifact(nasm_exe);
+            nasm_run.addArgs(&.{
+                "-w",                                                         "-Worphan-labels",    "-Wunrecognized-char",
+                "-Dprivate_prefix=mvtools",                                   "-DHIGH_BIT_DEPTH=0", "-DBIT_DEPTH=8",
+                b.fmt("-DARCH_X86_64={d}", .{@as(u8, if (is_x86) 1 else 0)}),
+            });
+
+            if (pic) {
+                nasm_run.addArg("-DPIC");
+            }
+
+            if (is_windows) {
+                nasm_run.addArgs(&.{ "-f", "win64", "-DPREFIX" });
+            }
+            if (is_linux) {
+                nasm_run.addArgs(&.{ "-f", "elf64" });
+            }
+            if (is_mac) {
+                nasm_run.addArgs(&.{ "-f", "macho64", "-DPREFIX" });
+            }
+
+            if (!strip) {
+                nasm_run.addArg("-g");
+            }
+
+            // Nasm requires '/' at the end of its includes
+            nasm_run.addDecoratedDirectoryArg("-I", upstream.path("src/asm/include"), "/");
+
+            nasm_run.addFileArg(upstream.path(a));
+
+            nasm_run.addArg("-o");
+            const ext = if(is_windows) ".obj" else ".o";
+            mod.addObjectFile(nasm_run.addOutputFileArg(b.fmt("{s}{s}", .{std.fs.path.stem(a), ext})));
+        }
+    }
+    if(is_aarch64) {
+        mod.addCSourceFiles(.{
+            .root = upstream.path("."),
+            .files = aarch64_sources,
+            .flags = flags,
+        });
+    }
 
     const lib = b.addLibrary(.{
         .name = "mvtools",
@@ -109,6 +160,13 @@ const avx2_sources = .{
     "SimpleResize_AVX2.cpp",
 };
 
-const arm_sources = .{
-    "asm/aarch64-pixel-a.S",
+const aarch64_sources = &.{
+    "src/asm/aarch64-pixel-a.S",
+};
+
+const x86_sources: []const []const u8 = &.{
+    "src/asm/const-a.asm",
+    "src/asm/cpu-a.asm",
+    "src/asm/pixel-a.asm",
+    "src/asm/sad-a.asm",
 };
