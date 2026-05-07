@@ -11,6 +11,10 @@
             .url = "https://github.com/allyourcodebase/nasm/archive/d7356eadb2d7771542fe74e8fc0668bd78732b59.tar.gz",
             .hash = "nasm-3.0.1-B_NnpQpTAAA25UxvqONakXtmj-a78PGe3xfgyDFgetb0",
         },
+        .fftw = .{
+            .url = "git+https://github.com/adworacz/fftw.git?ref=v3.3.11-2#579b516e6b39a2a96200d248fc3c96d1ad7d9841",
+            .hash = "fftw-3.3.11-2-EjV1I17WAgD0Lnb_BKT51TNd_56-eY4NBOPHO2IH_WHZ",
+        },
     },
     .minimum_zig_version = "0.15.2",
     .paths = .{

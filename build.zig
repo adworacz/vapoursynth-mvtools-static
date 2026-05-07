@@ -19,15 +19,25 @@ pub fn build(b: *std.Build) void {
         (optimize == .ReleaseFast);
     const pic = b.option(bool, "pic", "Enable PIC (position independent code) (default true)") orelse true;
 
+    const fftw = b.dependency("fftw", .{
+        .target = target,
+        .optimize = optimize,
+        .precision = .single,
+        .threads = true,
+    });
+
     const mod = b.createModule(.{
         .target = target,
         .optimize = optimize,
         .link_libc = true,
+        .link_libcpp = true,
         .strip = strip,
         .pic = pic,
     });
 
-    mod.addCMacro("PACKAGE_VERSION", version);
+    mod.linkLibrary(fftw.artifact("fftw3f"));
+
+    mod.addCMacro("PACKAGE_VERSION", b.fmt("\"{s}\"", .{version}));
 
     if(is_x86) {
         mod.addCMacro("MVTOOLS_X86", "1");
@@ -36,11 +46,11 @@ pub fn build(b: *std.Build) void {
         mod.addCMacro("MVTOOLS_ARM", "1");
     }
 
-    const vs_include_path = b.run(&.{"python", "-c", "import vapoursynth as vs; print(vs.get_include())"});
+    const vs_include_path = b.run(&.{"python", "-c", "import vapoursynth as vs; print(vs.get_include(), end='')"});
     
     // Add VS Headers
-    const path: std.Build.LazyPath = .{ .cwd_relative = vs_include_path };
-    mod.addIncludePath(path);
+    mod.addIncludePath(.{ .cwd_relative = vs_include_path });
+
     mod.addIncludePath(upstream.path("src"));
 
     mod.addCSourceFiles(.{
