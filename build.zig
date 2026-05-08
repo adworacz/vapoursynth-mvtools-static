@@ -107,6 +107,7 @@ pub fn build(b: *std.Build) void {
             .root = upstream.path("."),
             .files = aarch64_sources,
             .flags = flags,
+            // .language = .assembly_with_preprocessor,
         });
     }
 
