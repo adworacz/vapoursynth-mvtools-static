@@ -1,8 +1,7 @@
 ## Attempts at getting MVTools building with Zig's build infra
 
 # Current notes:
-1. building on x86_64 Linux works
-2. Building on aarch64 doesn't work for some reason (linker complains about non-PIC code)
-3. Building on windows doesn't work either.
+1. x86_64 windows, mac, and Linux build (not tested runtime yet).
+2. aarch64-linux *doesn't* work for some reason. Compiler complains about relocating code.
 
-So right now, only Linux works strangely. Still experimenting.
+
